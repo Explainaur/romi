@@ -1,10 +1,22 @@
 mod actions;
+mod ui;
 
-use crate::actions::decompress::{Decompresser, Decompress, unrar::archive::Entry};
+use crate::actions::{decompress, unzip};
+use crate::actions::decompress::{unrar::archive};
+use tauri::{CustomMenuItem, Menu, MenuItem, Submenu, Manager, WindowBuilder};
+
 fn main() {
-  let file = String::from("/Users/dyf/code/solo/project/Romi/test/hellbound.cbr");
-  let path = String::from("/Users/dyf/code/solo/project/Romi/test/1");
-  let mut decompresser = Decompresser::<Entry>::new();
-  let res = decompresser.decompress(file.clone(), path, None).get_file_list(file, None);
-  println!("{:?}", res);
+  let menu = Menu::new()
+    .add_item(CustomMenuItem::new("hide", "Hide"))
+    .add_submenu(Submenu::new("View", Menu::new()
+      .add_native_item(MenuItem::Zoom)
+      .add_native_item(MenuItem::EnterFullScreen)
+      .add_native_item(MenuItem::Hide),
+    ));
+
+  tauri::Builder::default()
+    .menu(menu)
+    .invoke_handler(tauri::generate_handler![actions::parse])
+    .run(tauri::generate_context!())
+    .expect("error while running tauri application");
 }

@@ -1,26 +1,47 @@
-use super::decompress;
 use unrar::Archive;
-use unrar::archive::{Entry, OpenArchive};
-use unrar::error::UnrarResult;
-use crate::actions::decompress::{Decompress, Decompresser};
+use serde::Serialize;
+pub use unrar::archive::{Entry, OpenArchive, EntryFlags};
+use crate::actions::decompress::{DCHandler, Decompress, Decompresser};
 
-impl Decompress<unrar::archive::Entry> for Decompresser<Entry> {
-  fn decompress(&mut self, filename: String, path: String, password: Option<String>) -> &Decompresser<Entry> {
-    self.entries = unrar(filename, path, password);
+#[derive(Serialize)]
+pub struct RarEntry {
+  pub idx: usize,
+  pub path: String,
+  pub name: String,
+  pub size: u32,
+}
+
+impl RarEntry {
+  pub fn new(idx: usize, path: String, entry: &Entry) -> RarEntry {
+    RarEntry {
+      idx,
+      path,
+      name: entry.filename.clone(),
+      size: entry.unpacked_size,
+    }
+  }
+}
+
+// TODO: add a macro to refine these process
+impl Decompress<RarEntry> for Decompresser<RarEntry> {
+  fn decompress_all(&mut self, dc_handler: DCHandler) -> &mut Self {
+    self.set_entries(unrar(dc_handler));
     self
   }
 
-  fn get_file_list(&self, filename: String, password: Option<String>) -> Vec<Entry> {
+  fn get_file_list(&self, filename: String, password: Option<String>) -> Vec<RarEntry> {
     get_file_list(filename, password)
   }
 }
 
-pub fn unrar(filename: String, path: String, password: Option<String>) -> Vec<Entry> {
+pub fn unrar(dc_handler: DCHandler) -> Vec<RarEntry> {
+  let DCHandler { filename, path, password } = dc_handler;
+
   // Get the archive information and extract everything
   let archive = match password {
     Some(password) => Archive::with_password(filename, password),
     None => Archive::new(filename)
-  }.extract_to(path);
+  }.extract_to(path.clone());
 
   let mut archive: OpenArchive = match archive {
     Ok(res) => res,
@@ -32,16 +53,22 @@ pub fn unrar(filename: String, path: String, password: Option<String>) -> Vec<En
     Ok(res) => res,
     Err(error) => panic!("Problem process archives: {:?}", error),
   };
-  entries
+
+  let mut res: Vec<RarEntry> = vec![];
+  for i in 0..entries.len() {
+    res.push(RarEntry::new(i, path.clone() + &entries[i].filename, &entries[i]));
+  }
+  sort_entries(&mut res);
+  res
 }
 
-pub fn get_file_list(filename: String, password: Option<String>) -> Vec<unrar::archive::Entry> {
+pub fn get_file_list(filename: String, password: Option<String>) -> Vec<RarEntry> {
   let list = match password {
     Some(password) => Archive::with_password(filename, password),
     None => Archive::new(filename)
   }.list();
 
-  let mut list = if let Ok(mut list) = list {
+  let list = if let Ok(mut list) = list {
     match list.process() {
       Ok(res) => res,
       Err(error) => panic!("Problem unrar the file: {:?}", error),
@@ -49,5 +76,18 @@ pub fn get_file_list(filename: String, password: Option<String>) -> Vec<unrar::a
   } else {
     panic!("Problem unrar the file: {:?}", list)
   };
-  list
+
+  let mut res: Vec<RarEntry> = vec![];
+  for i in 0..list.len() {
+    res.push(RarEntry::new(i, String::new(), &list[i]));
+  }
+  sort_entries(&mut res);
+  res
+}
+
+pub fn sort_entries(entries: &mut Vec<RarEntry>) {
+  entries.sort_by(|l, r| l.name.cmp(&r.name));
+  for i in 0..entries.len() {
+    entries[i].idx = i
+  }
 }
