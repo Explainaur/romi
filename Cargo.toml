@@ -5,15 +5,16 @@ edition = "2021"
 build = "build.rs"
 
 [build-dependencies]
-tauri-build = { version = "1.0.4", features = [] }
+tauri-build = { version = "1.1.1", features = [] }
 
 [dependencies]
 unrar = "0.4.4"
 zip = "0.6.2"
 home = "0.5.3"
 serde_json = "1.0"
+window-vibrancy = "0.3.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.0.6", features = ["api-all"] }
+tauri = { version = "1.1.1", features = ["api-all", "macos-private-api"] }
 
 [features]
 # by default Tauri runs in production mode

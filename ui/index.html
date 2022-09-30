@@ -39,15 +39,16 @@
         align-items: center
     }
 
-    .viewer {
-        backdrop-filter: blur(20px);
-        background: rgba(238, 238, 244, 0.5)
+    .padding {
+        padding-right: 1.2%;
+        padding-bottom: 0.5%;
     }
+
 </style>
 <body>
 
 
-<div id="pictures">
+<div id="pictures" class="ui-flex justify-center center">
 
 </div>
 <script>
@@ -66,7 +67,8 @@
         cell.append(pic);
         cell.className = "cell";
         box.append(cell);
-        box.className = "ui-flex justify-center center";
+        box.className = "padding"
+        // box.className = "ui-flex justify-center center";
         return box;
     }
 
